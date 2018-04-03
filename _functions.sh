@@ -93,8 +93,15 @@ function _prepare_github()
 function _migrate_trunk()
 {
 	_print_banner "Migrating Trunk to Master"
-	git remote add github ${GITHUB_URL}/${GITHUB_ORG}/${REPO_NAME}.git &>> ${LOG_FILE}
-  git push github --mirror &>> ${LOG_FILE}
+  git remote add github ${GITHUB_URL}/${GITHUB_ORG}/${REPO_NAME}.git &>> ${LOG_FILE}
+  if [[ $(git branch -a|grep 'remotes/svn/trunk') ]]
+  then
+    echo "git checkout -b master remotes/svn/trunk" &>> ${LOG_FILE}
+    git checkout -B master remotes/svn/trunk
+    git push --set-upstream github master &>> ${LOG_FILE}
+  else
+    git push github --mirror &>> ${LOG_FILE}
+  fi
 }
 
 ## Migrate all tags
@@ -115,10 +122,11 @@ function _migrate_branches()
 	_print_banner "Migrating Branches"
 	for branch in $(git branch -a|grep svn|grep -v '/tags/'|grep -v 'remotes/svn/trunk')
 	do
-	    git_branch=$(echo ${branch}|awk -F'/' {'print $NF'})
-	    git checkout -b ${git_branch} ${branch} &>> ${LOG_FILE}
+	    github_branch=$(echo ${branch}|awk -F'/' {'print $NF'})
+      echo "git checkout -b ${github_branch} ${branch}" &>> ${LOG_FILE}
+	    git checkout -B ${github_branch} ${branch} &>> ${LOG_FILE}
       _initialize_lfs &>> ${LOG_FILE}
-	    git push --set-upstream github ${git_branch} &>> ${LOG_FILE}
+	    git push --set-upstream github ${github_branch} &>> ${LOG_FILE}
 	done
 }
 
@@ -214,15 +222,15 @@ function _process_submodules()
   for SUBMODULE in ${SUBMODULES}
   do
     (
-      SUB_REPO_URL=${REPO_URL}/${SUBMODULE}
-      SUB_REPO_NAME=$(echo ${SUBMODULE}|awk -F'/' {'print $(NF-1)'})
-      SUB_GITHUB_REMOTE=${GITHUB_URL}/${GITHUB_ORG}/${REPO_NAME}.git
-      SUB_REV_LIST=$(svn log ${REPO_URL}|grep ^r[0-9]|awk {'print $1'}|sed 's/r//'|sort)
-      echo "${SUBMODULE},${SUB_GITHUB_REMOTE}" >> /tmp/github_remotes.txt
+      REPO_URL=${REPOSITORY}/${SUBMODULE}
+      REPO_NAME=$(echo ${SUBMODULE}|awk -F'/' {'print $(NF-1)'})
+      GITHUB_REMOTE=${GITHUB_URL}/${GITHUB_ORG}/${REPO_NAME}.git
+      REV_LIST=$(svn log ${REPO_URL}|grep ^r[0-9]|awk {'print $1'}|sed 's/r//'|sort)
+      echo "${SUBMODULE},${GITHUB_REMOTE}" >> /tmp/github_remotes.txt
       _get_svn_layout
       _prepare_github
-      git svn clone ${SUB_REPO_URL} ${SUB_REPO_NAME} ${FLAGS} -q --prefix=svn/ &>> ${LOG_FILE}
-      cd ${SUB_REPO_NAME}
+      _git_svn_clone &>> ${LOG_FILE}
+      cd ${REPO_NAME}
       git config http.sslVerify false
       _migrate_trunk
       _migrate_branches
@@ -248,6 +256,8 @@ function _git_svn_clone_with_history()
 
 function _git_svn_clone()
 {
+  #echo "git svn init ${REPO_URL} ${REPO_NAME} ${FLAGS} --prefix=svn/"
+  #sleep 30
   git svn init ${REPO_URL} ${REPO_NAME} ${FLAGS} --prefix=svn/
   (
     cd ${REPO_NAME}
@@ -257,7 +267,7 @@ function _git_svn_clone()
     HIDECURSOR
     echo -e "" && echo -e ""
     DRAW
-    echo -e "                    CLONING ${REPO_NAME}"
+    echo -e "                    CLONING ${REPO_NAME^^}"
     echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
     echo -e "    x                                                   x"
     echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
@@ -310,8 +320,8 @@ function _initialize_lfs()
 function _add_git_submodules()
 {
   (
+   REPO_NAME=$(svn info ${REPOSITORY}|grep '^Path'|awk {'print $2'}|sed 's/ /-/g')
    cd ${REPO_NAME}
-   PARENT=$(pwd)
    for SUBMODULE in $(cat /tmp/github_remotes.txt)
    do
      GITHUB_REMOTE=$(echo ${SUBMODULE}|awk -F',' {'print $2'})
