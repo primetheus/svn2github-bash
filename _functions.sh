@@ -74,7 +74,6 @@ function _welcome()
 		"expressed or implied, and may be modified" \
 		"by anyone who sees fit to do so, in any way" \
 		"they see fit, with no reprocussions whatsoever"
-
     echo ""
     read -n 1 -s -r -p "Press any key to continue..."
     echo ""
@@ -163,8 +162,11 @@ function _discover_submodules()
 			for NUM in ${!options[@]}; do
 				[[ ${choices[NUM]} ]] && SUBDIRS+="${options[NUM]} "
 			done
-			export IGNORE_DIRS=$(echo "'("${SUBDIRS}")'"|sed -e 's/ /|/g;s/\/|)/\/)/')
-			export FLAGS+=" --ignore-paths ${IGNORE_DIRS}"
+      if [[ ! -z ${SUBDIRS} ]]
+      then
+			  export IGNORE_DIRS=$(echo "'("${SUBDIRS}")'"|sed -e 's/ /|/g;s/\/|)/\/)/')
+			  export FLAGS+=" --ignore-paths ${IGNORE_DIRS}"
+      fi
 		}
 		#Variables
 		ERROR=" "
@@ -211,9 +213,28 @@ function _get_svn_layout()
   TAGS=$(svn ls ${REPO_URL}|grep '^tags/$'|awk -F'/' {'print $(NF-1)'})
   BRANCHES=$(svn ls ${REPO_URL}|grep '^branches/$'|awk -F'/' {'print $(NF-1)'})
   TRUNK=$(svn ls ${REPO_URL}|grep '^trunk/$'|awk -F'/' {'print $(NF-1)'})
-  [[ ! -z ${TRUNK} ]] && [[ ! -z $(svn ls ${REPO_URL}/trunk) ]] && FLAGS+=" --trunk=trunk"
+  ROOT_FILES=$(svn ls ${REPO_URL}|grep -Ev '(^tags/$|^trunk/$|^branches/$)')
   [[ ! -z ${BRANCHES} ]] && [[ ! -z $(svn ls ${REPO_URL}/branches) ]] && FLAGS+=" --branches=branches"
   [[ ! -z ${TAGS} ]] && [[ ! -z $(svn ls ${REPO_URL}/tags) ]] && FLAGS+=" --tags=tags"
+  if [[ ! -z ${TRUNK} ]] && [[ ! -z ${ROOT_FILES} ]]
+  then
+    clear
+    _print_banner "You have a non-empty \"trunk\" folder, but there are also" \
+    "files/folders in the root of your repository. There is"\
+    "no way to intelligently know what to do with these, and"\
+    "this is a discouraged practice. As such, the root of the"\
+    "repository will be treated as \"trunk\", and there will"\
+    "be a \"trunk\" folder next to the rest of the files."\
+    "If this is not the desired outcome, please take a few"\
+    "minutes to consolidate the files into \"trunk\" and then"\
+    "re-run the migration script".
+    echo ""
+    read -n 1 -s -r -p "Press any key to continue, CTRL+C to exit..."
+    echo ""
+  elif [[ ! -z ${TRUNK} ]] && [[ ! -z $(svn ls ${REPO_URL}/trunk) ]]
+  then
+    [[ -z ${ROOT_FILES} ]] && FLAGS+=" --trunk=trunk"
+  fi
 }
 
 function _process_submodules()
@@ -256,12 +277,13 @@ function _git_svn_clone_with_history()
 
 function _git_svn_clone()
 {
-  #echo "git svn init ${REPO_URL} ${REPO_NAME} ${FLAGS} --prefix=svn/"
-  #sleep 30
   git svn init ${REPO_URL} ${REPO_NAME} ${FLAGS} --prefix=svn/
   (
     cd ${REPO_NAME}
     REV=0
+    REV_LIST=$(svn log ${REPO_URL}|grep ^r[0-9]|awk {'print $1'}|sed 's/r//'|sort -g)
+    REV_COUNT=$(echo ${REV_LIST}|wc -w)
+    REV_HEAD=$(echo ${REV_LIST}|awk {'print $NF'})
     ## Setup the progress bar
     clear
     HIDECURSOR
