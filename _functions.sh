@@ -13,7 +13,7 @@ function _setup()
     export REPOSITORY # exporting so it's callable outside of this function
   done
   while [ -z ${GITHUB_URL} ];do
-  	[[ -z ${GITHUB_URL} ]] && read -p "Please specify a URL for GitHub (i.e. https://github.mycompany.com): " GITHUB_URL
+    [[ -z ${GITHUB_URL} ]] && read -p "Please specify a URL for GitHub (i.e. https://github.mycompany.com): " GITHUB_URL
     export GITHUB_URL # exporting so it's callable outside of this function
   done
   while [ -z ${GITHUB_ORG} ];do
@@ -21,12 +21,12 @@ function _setup()
     export GITHUB_ORG # exporting so it's callable outside of this function
   done
   while [ -z ${GITHUB_TOKEN} ];do
-  	[[ -z ${GITHUB_TOKEN} ]] && echo -n "Please provide a Personal Access Token that can create repositories in ${GITHUB_ORG}: ";read -s GITHUB_TOKEN
+    [[ -z ${GITHUB_TOKEN} ]] && echo -n "Please provide a Personal Access Token that can create repositories in ${GITHUB_ORG}: ";read -s GITHUB_TOKEN
     export GITHUB_TOKEN # exporting so it's callable outside of this function
-  	echo ""
+    echo ""
   done
   machine=$(echo ${GITHUB_URL}|awk -F'//' {'print $2'})
-	cat > ~/.netrc <<EOF
+  cat > ~/.netrc <<EOF
 machine ${machine}
     login token
     password ${GITHUB_TOKEN}
@@ -91,7 +91,7 @@ function _prepare_github()
 ## Migrate trunk to master
 function _migrate_trunk()
 {
-	echo "Migrating Trunk to Master..."
+  echo "Migrating Trunk to Master..."
   git remote add github ${GITHUB_URL}/${GITHUB_ORG}/${REPO_NAME}.git &>> ${LOG_FILE}
   if [[ $(git branch -a|grep 'remotes/svn/trunk') ]]
   then
@@ -106,13 +106,13 @@ function _migrate_trunk()
 ## Migrate all tags
 function _migrate_tags()
 {
-	echo "Migrating Tags..."
-	git for-each-ref refs/remotes/svn/tags|cut -d / -f5-|while read ref
-	do
-	    git tag -a "${ref}" -m"SVN to GitHub Migration" "refs/remotes/svn/tags/${ref}" &>> ${LOG_FILE}
-	    git push github ":refs/heads/tags/${ref}" &>> ${LOG_FILE}
-	    git push github tag "${ref}" &>> ${LOG_FILE}
-	done
+  echo "Migrating Tags..."
+  git for-each-ref refs/remotes/svn/tags|cut -d / -f5-|while read ref
+  do
+    git tag -a "${ref}" -m"SVN to GitHub Migration" "refs/remotes/svn/tags/${ref}" &>> ${LOG_FILE}
+    git push github ":refs/heads/tags/${ref}" &>> ${LOG_FILE}
+    git push github tag "${ref}" &>> ${LOG_FILE}
+  done
 }
 
 ## Migrate all branches, except "trunk"
