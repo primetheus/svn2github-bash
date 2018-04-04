@@ -135,8 +135,9 @@ function _migrate_branches()
 function _discover_submodules()
 {
   unset IGNORE_DIRS SUBMODULES ACTIONS SELECTION SUBDIRS choices options MENU FLAGS
-  _print_banner "Discovering Nested Repositories"
   _get_svn_layout
+  clear
+  echo "Discovering potential submodule candidates..."
   # Get the potential list of submodules, with branches, tags and trunk
   svn -R list ${REPO_URL}|grep -E '(/trunk/$|/branches/$|/tags/$)' > /tmp/submodules.txt
   # Remove empty "trunk", "tags" and "branches" from the list of potentials
@@ -211,6 +212,7 @@ function _discover_submodules()
 function _get_svn_layout()
 {
   unset FLAGS
+  echo "Analyzing repository layout..."
   TAGS=$(svn ls ${REPO_URL}|grep '^tags/$'|awk -F'/' {'print $(NF-1)'})
   BRANCHES=$(svn ls ${REPO_URL}|grep '^branches/$'|awk -F'/' {'print $(NF-1)'})
   TRUNK=$(svn ls ${REPO_URL}|grep '^trunk/$'|awk -F'/' {'print $(NF-1)'})
