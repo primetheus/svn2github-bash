@@ -21,6 +21,7 @@ sudo yum -y install git2u-svn git2u bc git-lfs
 - Selectable subfolders for conversion to _git submodules_
 - Progress bar
 - Failed `fetch` retries
+- Large file detection, with automatic LFS initialization
 
 ## Usage
 ```bash
@@ -72,3 +73,5 @@ SVN_PASSWORD=anonymous
 2. You may encounter issues with cloning the history if your repository has corrupt revisions. In this case, it will be required to do a clean cutover. This script does not yet fully support a clean cutover, but it is in the works
 
 3. If you have a `trunk` folder and files in the root of the repository then the script will treat the root as trunk. This is because `git-svn` cannot treat 2 folders like `master`. 
+
+4. `Git-LFS` is automatically initialized if large files are discovered, but this does not get around the max filesize limit of GitHub. You will still need to either increase that filesize temporarily for the migration, or else manually clean up the files. This is not handled by the script
