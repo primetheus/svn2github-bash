@@ -2,6 +2,19 @@
 
 This script migrates a subversion repository to GitHub, with some logic for dealing with nested repositories.
 
+## Requirements
+This script was developed using `CentOS 7` with the following packages installed:
+- [ ] `bc`
+- [ ] `git2u`
+- [ ] `git2u-svn`
+- [ ] `Git-LFS`
+
+To install, run the following commands:
+```bash
+sudo yum -y localinstall https://centos7.iuscommunity.org/ius-release.rpm
+sudo yum -y install git2u-svn git2u bc git-lfs
+```
+
 ## Features
 - Sizing of the remote repository
 - Detection of nested folders with `trunk`, `tags` and `branches`
