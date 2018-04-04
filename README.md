@@ -18,7 +18,7 @@ sudo yum -y install git2u-svn git2u bc git-lfs
 ## Features
 - Sizing of the remote repository
 - Detection of nested folders with `trunk`, `tags` and `branches`
-- Selectable subfolders for separate conversion
+- Selectable subfolders for conversion to _git submodules_
 - Progress bar
 - Failed `fetch` retries
 
