@@ -14,6 +14,10 @@ To install, run the following commands:
 sudo yum -y localinstall https://centos7.iuscommunity.org/ius-release.rpm
 sudo yum -y install git2u-svn git2u bc git-lfs
 ```
+### Building the Docker container
+```bash
+docker build -t github/svn2github .
+```
 
 ## Features
 - Sizing of the remote repository
@@ -26,6 +30,21 @@ sudo yum -y install git2u-svn git2u bc git-lfs
 ## Usage
 ```bash
 chmod +x svn2github.sh
+./svn2github.sh
+```
+
+### Running in Docker
+1. Run the container
+```bash
+docker run -dit --name svn2github github/svn2github
+```
+2. Enter a shell prompt in the container
+```bash
+docker exec -it svn2github bash
+```
+3. Edit the `settings.ini` file
+4. Execute the script
+```bash
 ./svn2github.sh
 ```
 
