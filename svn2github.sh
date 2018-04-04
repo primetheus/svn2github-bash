@@ -6,17 +6,15 @@ _welcome
 _setup
 _svn_sizer
 _discover_submodules
-_git_svn_clone
-# Don't process submodules first... it will change the processing of the parent
 _process_submodules
-
+_git_svn_clone
 (
   cd ${REPO_NAME}
   git config http.sslVerify false
   _prepare_github
   _migrate_trunk
+  _add_git_submodules
   _migrate_tags
   _migrate_branches
 )
-
 _cleanup
