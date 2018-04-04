@@ -25,6 +25,7 @@ function _setup()
     export GITHUB_TOKEN # exporting so it's callable outside of this function
     echo ""
   done
+  [[ ! -z ${AUTHORS_FILE} ]] && AUTHORS=" --authors-file=${AUTHORS_FILE}"
   machine=$(echo ${GITHUB_URL}|awk -F'//' {'print $2'})
   cat > ~/.netrc <<EOF
 machine ${machine}
@@ -367,7 +368,7 @@ function _add_git_submodules()
      rm -fr ${LOCAL_PATH} &>> ${LOG_FILE}
      git add -u
      git submodule add ${GITHUB_REMOTE} ${LOCAL_PATH} &>> ${LOG_FILE}
-     #git submodule init 
+     #git submodule init
      git add .gitmodules ${LOCAL_PATH} && git add -u
      git commit -m"Added git submodule ${SUBMODULE}" &>> ${LOG_FILE}
    done
