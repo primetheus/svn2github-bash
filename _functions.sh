@@ -272,7 +272,7 @@ function _git_svn_clone_with_history()
 {
   _print_banner "Cloning ${REPO_NAME} without history"
   _get_svn_layout
-	git svn clone ${REPO_URL} ${REPO_NAME} ${FLAGS} --prefix=svn/
+  git svn clone ${REPO_URL} ${REPO_NAME} ${FLAGS} --prefix=svn/
 }
 
 function _git_svn_clone()
@@ -359,16 +359,19 @@ function _add_git_submodules()
 {
   (
    REPO_NAME=$(svn info ${REPOSITORY}|grep '^Path'|awk {'print $2'}|sed 's/ /-/g')
-   cd ${REPO_NAME}
+   [[ $(pwd|awk -F'/' {'print $NF'}) != ${REPO_NAME} ]] && cd ${REPO_NAME}
    for SUBMODULE in $(cat /tmp/github_remotes.txt)
    do
      GITHUB_REMOTE=$(echo ${SUBMODULE}|awk -F',' {'print $2'})
      LOCAL_PATH=$(echo ${SUBMODULE}|awk -F',' {'print $1'})
      rm -fr ${LOCAL_PATH} &>> ${LOG_FILE}
+     git add -u
      git submodule add ${GITHUB_REMOTE} ${LOCAL_PATH} &>> ${LOG_FILE}
-     git add . && git commit -am"Added git submodule ${SUBMODULE}" &>> ${LOG_FILE}
+     #git submodule init 
+     git add .gitmodules ${LOCAL_PATH} && git add -u
+     git commit -m"Added git submodule ${SUBMODULE}" &>> ${LOG_FILE}
    done
-   git push --set-upstream github master &>> ${LOG_FILE}
+   git push &>> ${LOG_FILE}
   )
 }
 
