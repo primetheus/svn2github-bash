@@ -5,7 +5,7 @@ function _setup()
   ## If we have a settings file, use it to bypass input
   INC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
   [[ -f ${INC_DIR}/settings.ini ]] && source ${INC_DIR}/settings.ini
-
+  rm -f /tmp/{submodules,github_remotes}.txt
   ## If there's no settings file, ask for input
   ## This can be stored your the environment as well
   while [ -z ${REPOSITORY} ];do
@@ -26,16 +26,23 @@ function _setup()
     echo ""
   done
   [[ ! -z ${AUTHORS_FILE} ]] && AUTHORS=" --authors-file=${AUTHORS_FILE}"
-  machine=$(echo ${GITHUB_URL}|awk -F'//' {'print $2'})
+  github_machine=$(echo ${GITHUB_URL}|awk -F'//' {'print $2'})
+  svn_machine=$(echo ${REPOSITORY}|awk -F'/' {'print $3'})
   cat > ~/.netrc <<EOF
-machine ${machine}
-    login token
-    password ${GITHUB_TOKEN}
+machine ${github_machine}
+  login token
+  password ${GITHUB_TOKEN}
+
+machine ${svn_machine}
+  login ${SVN_USERNAME}
+  password ${SVN_PASSWORD}
 EOF
+  ## Set our default SVN options
+  SVN_OPTIONS="--trust-server-cert --non-interactive --no-auth-cache --username ${SVN_USERNAME} --password ${SVN_PASSWORD}"
   ## Get the repo name and full URL for the remote subversion repository
-  REPO_NAME=$(svn info ${REPOSITORY}|grep '^Path'|awk {'print $2'}|sed 's/ /-/g')
-  REPO_URL=$(svn info ${REPOSITORY}|grep '^URL'|awk {'print $2'})
-  SVN_HEAD=$(svn info ${REPOSITORY}|grep '^Revision'|awk {'print $2'})
+  REPO_NAME=$(svn info ${REPOSITORY} ${SVN_OPTIONS}|grep '^Path'|awk {'print $2'}|sed 's/ /-/g')
+  REPO_URL=$(svn info ${REPOSITORY} ${SVN_OPTIONS}|grep '^URL'|awk {'print $2'})
+  SVN_HEAD=$(svn info ${REPOSITORY} ${SVN_OPTIONS}|grep '^Revision'|awk {'print $2'})
   ## Set the log file, if we don't have an explicit file configured
   [[ -z ${LOG_FILE} ]] && LOG_FILE=/tmp/svn2github-${REPO_NAME}.log
 }
@@ -44,7 +51,7 @@ EOF
 function _svn_sizer()
 {
   _print_banner "Discovering repository size"
-  svn list -vR ${REPO_URL}|awk '{if ($3 !="") sum+=$3; i++} END {print "\nTotal Size: " sum/1024000" MB" "\nNumber of Files: " i/1000 " K"}'
+  svn list ${SVN_OPTIONS} -vR ${REPO_URL}|awk '{if ($3 !="") sum+=$3; i++} END {print "\nTotal Size: " sum/1024000" MB" "\nNumber of Files: " i/1000 " K"}'
 }
 
 ## Format a banner
@@ -139,11 +146,11 @@ function _discover_submodules()
   clear
   echo "Discovering potential submodule candidates..."
   # Get the potential list of submodules, with branches, tags and trunk
-  svn -R list ${REPO_URL}|grep -E '(/trunk/$|/branches/$|/tags/$)' > /tmp/submodules.txt
+  svn -R list ${REPO_URL} ${SVN_OPTIONS}|grep -E '(/trunk/$|/branches/$|/tags/$)' > /tmp/submodules.txt
   # Remove empty "trunk", "tags" and "branches" from the list of potentials
   for DIR in $(cat submodules.txt);
   do
-    FILES=$(svn list ${REPO_URL}/${DIR})
+    FILES=$(svn list ${REPO_URL}/${DIR} ${SVN_OPTIONS})
     if [[ ${#FILES} -le 1 ]]
     then
       sed -i "s/${DIR}/d" /tmp/submodules.txt
@@ -189,7 +196,6 @@ function _discover_submodules()
         done
         echo "$ERROR"
     }
-
     #Menu loop
     while MENU && read -e -p "Select the desired options using their number (again to uncheck, ENTER when done): " -n1 SELECTION && [[ -n "${SELECTION}" ]]; do
       clear
@@ -213,12 +219,12 @@ function _get_svn_layout()
 {
   unset FLAGS
   echo "Analyzing repository layout..."
-  TAGS=$(svn ls ${REPO_URL}|grep '^tags/$'|awk -F'/' {'print $(NF-1)'})
-  BRANCHES=$(svn ls ${REPO_URL}|grep '^branches/$'|awk -F'/' {'print $(NF-1)'})
-  TRUNK=$(svn ls ${REPO_URL}|grep '^trunk/$'|awk -F'/' {'print $(NF-1)'})
-  ROOT_FILES=$(svn ls ${REPO_URL}|grep -Ev '(^tags/$|^trunk/$|^branches/$)')
-  [[ ! -z ${BRANCHES} ]] && [[ ! -z $(svn ls ${REPO_URL}/branches) ]] && FLAGS+=" --branches=branches"
-  [[ ! -z ${TAGS} ]] && [[ ! -z $(svn ls ${REPO_URL}/tags) ]] && FLAGS+=" --tags=tags"
+  TAGS=$(svn ls ${REPO_URL} ${SVN_OPTIONS}|grep '^tags/$'|awk -F'/' {'print $(NF-1)'})
+  BRANCHES=$(svn ls ${REPO_URL} ${SVN_OPTIONS}|grep '^branches/$'|awk -F'/' {'print $(NF-1)'})
+  TRUNK=$(svn ls ${REPO_URL} ${SVN_OPTIONS}|grep '^trunk/$'|awk -F'/' {'print $(NF-1)'})
+  ROOT_FILES=$(svn ls ${REPO_URL} ${SVN_OPTIONS}|grep -Ev '(^tags/$|^trunk/$|^branches/$)')
+  [[ ! -z ${BRANCHES} ]] && [[ ! -z $(svn ls ${REPO_URL}/branches ${SVN_OPTIONS}) ]] && FLAGS+=" --branches=branches"
+  [[ ! -z ${TAGS} ]] && [[ ! -z $(svn ls ${REPO_URL}/tags ${SVN_OPTIONS}) ]] && FLAGS+=" --tags=tags"
   if [[ ! -z ${TRUNK} ]] && [[ ! -z ${ROOT_FILES} ]]
   then
     clear
@@ -235,7 +241,7 @@ function _get_svn_layout()
     read -n 1 -s -r -p "Press any key to continue, CTRL+C to exit..."
     echo ""
     FLAGS+=" --trunk=/"
-  elif [[ ! -z ${TRUNK} ]] && [[ ! -z $(svn ls ${REPO_URL}/trunk) ]]
+  elif [[ ! -z ${TRUNK} ]] && [[ ! -z $(svn ls ${REPO_URL}/trunk ${SVN_OPTIONS}) ]]
   then
     [[ -z ${ROOT_FILES} ]] && FLAGS+=" --trunk=trunk"
   fi
@@ -250,7 +256,7 @@ function _process_submodules()
       REPO_URL=${REPOSITORY}/${SUBMODULE}
       REPO_NAME=$(echo ${SUBMODULE}|awk -F'/' {'print $(NF-1)'})
       GITHUB_REMOTE=${GITHUB_URL}/${GITHUB_ORG}/${REPO_NAME}.git
-      REV_LIST=$(svn log ${REPO_URL}|grep ^r[0-9]|awk {'print $1'}|sed 's/r//'|sort)
+      REV_LIST=$(svn log ${REPO_URL} ${SVN_OPTIONS}|grep ^r[0-9]|awk {'print $1'}|sed 's/r//'|sort)
       echo "${SUBMODULE},${GITHUB_REMOTE}" >> /tmp/github_remotes.txt
       _get_svn_layout
       _prepare_github
@@ -284,23 +290,23 @@ function _git_svn_clone()
   (
     cd ${REPO_NAME}
     #REV=0
-    REV_LIST=$(svn log ${REPO_URL}|grep ^r[0-9]|awk {'print $1'}|sed 's/r//'|sort -g)
+    REV_LIST=$(svn log ${REPO_URL} ${SVN_OPTIONS}|grep ^r[0-9]|awk {'print $1'}|sed 's/r//'|sort -g)
     REV_COUNT=$(echo ${REV_LIST}|wc -w)
     REV_HEAD=$(echo ${REV_LIST}|awk {'print $NF'})
     ## Setup the progress bar
-    clear
-    HIDECURSOR
-    echo -e "" && echo -e ""
-    DRAW
-    echo -e "                    CLONING ${REPO_NAME^^}"
-    echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
-    echo -e "    x                                                   x"
-    echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
-    WRITE
     OLD_REV=0
     # Start Script
     for REV in ${REV_LIST}
     do
+      clear
+      HIDECURSOR
+      echo -e "" && echo -e ""
+      DRAW
+      echo -e "             CLONING ${REPO_NAME^^}: REV ${REV}"
+      echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
+      echo -e "    x                                                   x"
+      echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
+      WRITE
       ## Fill in the gaps of the progress bar
       if [[ $((${REV} - ${OLD_REV} )) -gt 1 ]]
       then
@@ -323,10 +329,20 @@ function _git_svn_clone()
           echo 'Please type "yes" or "no"'
           read -p "Would you like to attempt revision ${REV} again? (yes/no) " RETRY
         done
-        if [[ "${RETRY}" == "no" ]]
+        if [[ "${RETRY,,}" == "no" ]]
         then
           RESULT=0
         else
+          clear
+          echo "Retrying revision ${REV}..."
+          HIDECURSOR
+          echo -e "" && echo -e ""
+          DRAW
+          echo -e "             CLONING ${REPO_NAME^^}: REV ${REV}"
+          echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
+          echo -e "    x                                                   x"
+          echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
+          WRITE
           showBar ${REV} ${REV_HEAD}
           git svn fetch -qr${REV} ${AUTHORS} &>> ${LOG_FILE} > /dev/null
           RESULT=$?
@@ -361,7 +377,7 @@ function _initialize_lfs()
 function _add_git_submodules()
 {
   (
-   REPO_NAME=$(svn info ${REPOSITORY}|grep '^Path'|awk {'print $2'}|sed 's/ /-/g')
+   REPO_NAME=$(svn info ${REPOSITORY} ${SVN_OPTIONS}|grep '^Path'|awk {'print $2'}|sed 's/ /-/g')
    [[ $(pwd|awk -F'/' {'print $NF'}) != ${REPO_NAME} ]] && cd ${REPO_NAME}
    for SUBMODULE in $(cat /tmp/github_remotes.txt)
    do
