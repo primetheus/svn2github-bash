@@ -200,6 +200,10 @@ function _discover_submodules()
   echo "Discovering potential submodule candidates..."
   # Get the potential list of submodules, with branches, tags and trunk
   svn -R list ${REPO_URL} ${SVN_OPTIONS}|grep -E '(/trunk/$|/branches/$|/tags/$)' > /tmp/submodules.txt
+  # it turns out, some folks have .git in their repos, and this falsely
+  # identifies those as submodules. Let's remove those entries and not
+  # present the user with the option to migrate them
+  sed -i 's/\/.git\//d' /tmp/submodules.txt
   # Remove empty "trunk", "tags" and "branches" from the list of potentials
   for DIR in $(cat /tmp/submodules.txt);
   do
