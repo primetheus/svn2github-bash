@@ -25,20 +25,32 @@ function _setup()
     export GITHUB_TOKEN # exporting so it's callable outside of this function
     echo ""
   done
-  [[ ! -z ${AUTHORS_FILE} ]] && AUTHORS=" --authors-file=${AUTHORS_FILE}"
+  [[ -z ${MAX_FILE_SIZE} ]] && MAX_FILE_SIZE=100
+  if [[ ! -z ${AUTHORS_FILE} ]]
+  then
+    if [[ ! -f ${AUTHORS_FILE} ]]
+    then
+      echo "${AUTHORS_FILE} does not exist, but the AUTHORS_FILE variable is set"
+      echo "Please ensure this file is created and contains a complete list of"
+      echo "author information before continuing"
+      exit 1
+    else
+      AUTHORS=" --authors-file=${AUTHORS_FILE}"
+    fi
+  fi
   github_machine=$(echo ${GITHUB_URL}|awk -F'//' {'print $2'})
-  svn_machine=$(echo ${REPOSITORY}|awk -F'/' {'print $3'})
+  svn_machine=$(echo ${REPOSITORY}|awk -F'/' {'print $3'}|awk -F':' {'print $1'})
   cat > ~/.netrc <<EOF
 machine ${github_machine}
-  login token
-  password ${GITHUB_TOKEN}
+login token
+password ${GITHUB_TOKEN}
 
 machine ${svn_machine}
-  login ${SVN_USERNAME}
-  password ${SVN_PASSWORD}
+login ${SVN_USERNAME}
+password ${SVN_PASSWORD}
 EOF
   ## Set our default SVN options
-  SVN_OPTIONS="--trust-server-cert --non-interactive --no-auth-cache --username ${SVN_USERNAME} --password ${SVN_PASSWORD}"
+  SVN_OPTIONS="--trust-server-cert --non-interactive --no-auth-cache"
   ## Get the repo name and full URL for the remote subversion repository
   REPO_NAME=$(svn info ${REPOSITORY} ${SVN_OPTIONS}|grep '^Path'|awk {'print $2'}|sed 's/ /-/g')
   REPO_URL=$(svn info ${REPOSITORY} ${SVN_OPTIONS}|grep '^URL'|awk {'print $2'})
@@ -51,7 +63,46 @@ EOF
 function _svn_sizer()
 {
   _print_banner "Discovering repository size"
-  svn list ${SVN_OPTIONS} -vR ${REPO_URL}|awk '{if ($3 !="") sum+=$3; i++} END {print "\nTotal Size: " sum/1024000" MB" "\nNumber of Files: " i/1000 " K"}'
+  svn list ${SVN_OPTIONS} -vR ${REPO_URL}|grep -v '/$'|awk '
+  {
+    sum+=$3
+    if (($3 + 1048575)/1048576 > '$MAX_FILE_SIZE')
+    {
+      print ($3 + 1048575)/1048575" MiB "$NF
+    }
+    i++
+  } END {
+    print "\nTotal Size: " (sum + 1048575)/1048576" MiB" "\nNumber of Files: " i/1000 " K"
+  }' > /tmp/${REPO_NAME}-size.txt
+  tail -n3 /tmp/${REPO_NAME}-size.txt
+  if [[ "$(head -n1 /tmp/${REPO_NAME}-size.txt|awk {'print $2'})" = "MiB" ]]
+  then
+    _print_banner "The following files have been discovered to exceed" \
+    "the maximum allowable filesize of the repository," \
+    "which is currently set to ${MAX_FILE_SIZE}. Please" \
+    "remove these files from the subversion repository, or" \
+    "else increase the max file size (not recommended) and" \
+    "then re-run the migration script." \
+    " " \
+    " For a complete list of files, refer to:" \
+    "/tmp/${REPO_NAME}-size.txt"
+    echo ""
+    head -n -3 /tmp/${REPO_NAME}-size.txt
+    exit 1
+  else
+    sleep 5
+  fi
+}
+
+# Convert bytes to human readable
+function _humanize_bytes()
+{
+  local -i bytes=$1;
+  if [[ ${bytes} -lt 1048576 ]]; then
+    echo "$(( (bytes + 1023)/1024 )) KiB"
+  else
+    echo "$(( (bytes + 1048575)/1048576 )) MiB"
+  fi
 }
 
 ## Format a banner
@@ -74,6 +125,7 @@ function _print_banner()
 
 function _welcome()
 {
+  clear
   _print_banner "Welcome to the Subversion to GitHub migrator" \
     "utility! This utility is intended for use by" \
     "experienced systems administrators, as there" \
@@ -148,7 +200,7 @@ function _discover_submodules()
   # Get the potential list of submodules, with branches, tags and trunk
   svn -R list ${REPO_URL} ${SVN_OPTIONS}|grep -E '(/trunk/$|/branches/$|/tags/$)' > /tmp/submodules.txt
   # Remove empty "trunk", "tags" and "branches" from the list of potentials
-  for DIR in $(cat submodules.txt);
+  for DIR in $(cat /tmp/submodules.txt);
   do
     FILES=$(svn list ${REPO_URL}/${DIR} ${SVN_OPTIONS})
     if [[ ${#FILES} -le 1 ]]
@@ -294,29 +346,30 @@ function _git_svn_clone()
     REV_COUNT=$(echo ${REV_LIST}|wc -w)
     REV_HEAD=$(echo ${REV_LIST}|awk {'print $NF'})
     ## Setup the progress bar
-    OLD_REV=0
+    CURRENT_REV=0
     # Start Script
+    clear
+    HIDECURSOR
+    echo -e "" && echo -e ""
+    DRAW
+    echo -e "                      CLONING ${REPO_NAME^^}"
+    echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
+    echo -e "    x                                                   x"
+    echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
+    WRITE
     for REV in ${REV_LIST}
     do
-      clear
-      HIDECURSOR
-      echo -e "" && echo -e ""
-      DRAW
-      echo -e "             CLONING ${REPO_NAME^^}: REV ${REV}"
-      echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
-      echo -e "    x                                                   x"
-      echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
-      WRITE
-      ## Fill in the gaps of the progress bar
-      if [[ $((${REV} - ${OLD_REV} )) -gt 1 ]]
-      then
-        while [[ ${OLD_REV} -lt ${REV} ]]
-        do
-          showBar ${OLD_REV} ${REV_HEAD}
-          ((OLD_REV++))
-        done
-      fi
-      showBar ${REV} ${REV_HEAD}
+      #[[ ${CURRENT_REV} -le 5 ]] && clear
+      #HIDECURSOR
+      #echo -e "" && echo -e ""
+      #DRAW
+      #echo -e "                      CLONING ${REPO_NAME^^}"
+      #echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
+      #echo -e "    x                                                   x"
+      #echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
+      #WRITE
+      showBar ${CURRENT_REV} ${REV_COUNT}
+      echo -e "" && echo -e "     REV: ${REV}"
       git svn fetch -qr${REV} ${AUTHORS} &>> ${LOG_FILE} > /dev/null
       RESULT=$?
       while [[ ${RESULT} -ne 0 ]]
@@ -334,21 +387,27 @@ function _git_svn_clone()
           RESULT=0
         else
           clear
-          echo "Retrying revision ${REV}..."
           HIDECURSOR
           echo -e "" && echo -e ""
           DRAW
-          echo -e "             CLONING ${REPO_NAME^^}: REV ${REV}"
+          echo -e "                     CLONING ${REPO_NAME^^}"
           echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
           echo -e "    x                                                   x"
           echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
           WRITE
-          showBar ${REV} ${REV_HEAD}
+          OLD_REV=0
+          while [[ ${OLD_REV} -lt ${CURRENT_REV} ]]
+          do
+            showBar ${OLD_REV} ${REV_COUNT}
+            ((OLD_REV++))
+          done
+          showBar ${CURRENT_REV} ${REV_COUNT}
+          echo -e "" && echo -e "     REV: ${REV}"
           git svn fetch -qr${REV} ${AUTHORS} &>> ${LOG_FILE} > /dev/null
           RESULT=$?
         fi
       done
-      OLD_REV=${REV}
+      ((CURRENT_REV++))
     done
     PUT 10 12
     echo -e ""
