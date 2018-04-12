@@ -50,7 +50,7 @@ login ${SVN_USERNAME}
 password ${SVN_PASSWORD}
 EOF
   ## Set our default SVN options
-  SVN_OPTIONS="--trust-server-cert --non-interactive --no-auth-cache"
+  SVN_OPTIONS="--trust-server-cert --non-interactive --no-auth-cache --username ${SVN_USERNAME} --password ${SVN_PASSWORD}"
   ## Get the repo name and full URL for the remote subversion repository
   REPO_NAME=$(svn info ${REPOSITORY} ${SVN_OPTIONS}|grep '^Path'|awk {'print $2'}|sed 's/ /-/g')
   REPO_URL=$(svn info ${REPOSITORY} ${SVN_OPTIONS}|grep '^URL'|awk {'print $2'})
@@ -123,6 +123,7 @@ function _print_banner()
   tput sgr 0
 }
 
+## Print our welcome message
 function _welcome()
 {
   clear
@@ -267,6 +268,7 @@ function _discover_submodules()
   fi
 }
 
+## Discover what our repository looks like
 function _get_svn_layout()
 {
   unset FLAGS
@@ -299,6 +301,7 @@ function _get_svn_layout()
   fi
 }
 
+## Convert our nested repositories to Git and push to GitHub
 function _process_submodules()
 {
   echo '' > /tmp/github_remotes.txt
@@ -322,20 +325,19 @@ function _process_submodules()
   done
 }
 
-function _git_svn_clone_without_history()
+## Perform a clean cutover
+function _clean_cutover()
 {
-  _print_banner "Cloning ${REPO_NAME} without history"
-  _get_svn_layout
+  _print_banner "Migrating ${REPO_NAME} without history"
+  rm -fr ${REPO_NAME}
   git svn clone -rHEAD ${REPO_URL} ${REPO_NAME} ${FLAGS} --prefix=svn/
+  cd ${REPO_NAME}
+  _migrate_trunk
+  _migrate_branches
+  _migrate_tags
 }
 
-function _git_svn_clone_with_history()
-{
-  _print_banner "Cloning ${REPO_NAME} without history"
-  _get_svn_layout
-  git svn clone ${REPO_URL} ${REPO_NAME} ${FLAGS} --prefix=svn/
-}
-
+## Migrate our repository with history
 function _git_svn_clone()
 {
   git svn init ${REPO_URL} ${REPO_NAME} ${FLAGS} --prefix=svn/
@@ -359,22 +361,13 @@ function _git_svn_clone()
     WRITE
     for REV in ${REV_LIST}
     do
-      #[[ ${CURRENT_REV} -le 5 ]] && clear
-      #HIDECURSOR
-      #echo -e "" && echo -e ""
-      #DRAW
-      #echo -e "                      CLONING ${REPO_NAME^^}"
-      #echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
-      #echo -e "    x                                                   x"
-      #echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
-      #WRITE
       showBar ${CURRENT_REV} ${REV_COUNT}
       echo -e "" && echo -e "     REV: ${REV}"
       git svn fetch -qr${REV} ${AUTHORS} &>> ${LOG_FILE} > /dev/null
       RESULT=$?
       while [[ ${RESULT} -ne 0 ]]
       do
-        echo "" && echo "" && echo ""
+        echo "" && echo ""
         echo "Revision ${REV} failed to clone, possibly due to corruption."
         echo ""
         ERROR_MSG=$(grep [a-zA-Z0-9] ${LOG_FILE}|tail -n1)
@@ -386,25 +379,25 @@ function _git_svn_clone()
           echo 'Please type "yes" or "no"'
           read -p "Would you like to attempt revision ${REV} again? (yes/no) " RETRY
         done
+        clear
+        HIDECURSOR
+        echo -e "" && echo -e ""
+        DRAW
+        echo -e "                     CLONING ${REPO_NAME^^}"
+        echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
+        echo -e "    x                                                   x"
+        echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
+        WRITE
+        OLD_REV=0
+        while [[ ${OLD_REV} -lt ${CURRENT_REV} ]]
+        do
+          showBar ${OLD_REV} ${REV_COUNT}
+          ((OLD_REV++))
+        done
         if [[ "${RETRY,,}" == "no" ]]
         then
           RESULT=0
         else
-          clear
-          HIDECURSOR
-          echo -e "" && echo -e ""
-          DRAW
-          echo -e "                     CLONING ${REPO_NAME^^}"
-          echo -e "    lqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqk"
-          echo -e "    x                                                   x"
-          echo -e "    mqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqj"
-          WRITE
-          OLD_REV=0
-          while [[ ${OLD_REV} -lt ${CURRENT_REV} ]]
-          do
-            showBar ${OLD_REV} ${REV_COUNT}
-            ((OLD_REV++))
-          done
           showBar ${CURRENT_REV} ${REV_COUNT}
           echo -e "" && echo -e "     REV: ${REV}"
           git svn fetch -qr${REV} ${AUTHORS} &>> ${LOG_FILE} > /dev/null
@@ -419,6 +412,8 @@ function _git_svn_clone()
   )
 }
 
+## Check to see if we have large binaries
+## If we do, initialize Git-LFS and track them
 function _initialize_lfs()
 {
   LARGE_FILES=$(find . -path ./.git -prune -o -size +10M -exec ls {} \+)
@@ -437,6 +432,8 @@ function _initialize_lfs()
   fi
 }
 
+## Add the discovered Git Submodules to our
+## repository
 function _add_git_submodules()
 {
   (
@@ -474,6 +471,7 @@ function showBar()
   tput sgr0
 }
 
+## Clean up the files that will break re-runs
 function _cleanup()
 {
   rm -f /tmp/{submodules,github_remotes}.txt
