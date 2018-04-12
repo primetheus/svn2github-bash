@@ -286,6 +286,7 @@ function _get_svn_layout()
   if [[ ! -z ${TRUNK} ]] && [[ ! -z ${ROOT_FILES} ]]
   then
     clear
+    echo "Repository Name: ${REPO_NAME}" && echo ""
     _print_banner "You have a non-empty \"trunk\" folder, but there are also" \
     "files/folders in the root of your repository. There is"\
     "no way to intelligently know what to do with these, and"\
