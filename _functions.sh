@@ -374,8 +374,12 @@ function _git_svn_clone()
       RESULT=$?
       while [[ ${RESULT} -ne 0 ]]
       do
-        echo "" && echo "" && echo "" && echo "" && echo ""
+        echo "" && echo "" && echo ""
         echo "Revision ${REV} failed to clone, possibly due to corruption."
+        echo ""
+        ERROR_MSG=$(grep [a-zA-Z0-9] ${LOG_FILE}|tail -n1)
+        echo "Error: ${ERROR_MSG}"
+        echo ""
         read -p "Would you like to attempt revision ${REV} again? (yes/no) " RETRY
         while [[ "${RETRY,,}" != "yes" ]] && [[ "${RETRY,,}" != "no" ]]
         do
