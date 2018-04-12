@@ -366,12 +366,20 @@ function _git_svn_clone()
     WRITE
     for REV in ${REV_LIST}
     do
+      RETRY_COUNT=0
       showBar ${CURRENT_REV} ${REV_COUNT}
       echo -e "" && echo -e "     REV: ${REV}"
       git svn fetch -qr${REV} ${AUTHORS} &>> ${LOG_FILE} > /dev/null
       RESULT=$?
       while [[ ${RESULT} -ne 0 ]]
       do
+        if [[ ${RETRY_COUNT} -gt 5 ]]
+        then
+          echo "" && echo ""
+          echo "It would appear that retrying is a pointless venture."
+          echo "Please consider a clean cutover, as it is unlikely this"
+          echo "will resolve."
+        fi
         echo "" && echo ""
         echo "Revision ${REV} failed to clone, possibly due to corruption."
         echo ""
@@ -408,6 +416,7 @@ function _git_svn_clone()
           git svn fetch -qr${REV} ${AUTHORS} &>> ${LOG_FILE} > /dev/null
           RESULT=$?
         fi
+        ((RETRY++))
       done
       ((CURRENT_REV++))
     done
