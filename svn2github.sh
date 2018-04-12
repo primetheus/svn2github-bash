@@ -2,6 +2,7 @@
 INC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 source ${INC_DIR}/_functions.sh
 
+_cleanup
 _welcome
 _setup
 _svn_sizer
