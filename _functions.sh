@@ -1,10 +1,16 @@
 function _setup()
 {
+  # This is for Windows Git-Bash, so we can include `bc.exe`
+  export PATH=${PATH}:$(pwd)
   ## Git-SVN has issues on Mac... don't try it. Just use Docker or a VM
-  [[ $(uname) != 'Linux' ]] && echo "Sorry, this works only with Linux" && exit 1
+  if [[ $(uname) != 'Linux' ]]
+  then
+    source settings.ini
+  else
+    INC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
+    [[ -f ${INC_DIR}/settings.ini ]] && source ${INC_DIR}/settings.ini
+  fi
   ## If we have a settings file, use it to bypass input
-  INC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
-  [[ -f ${INC_DIR}/settings.ini ]] && source ${INC_DIR}/settings.ini
   rm -f /tmp/{submodules,github_remotes}.txt
   ## If there's no settings file, ask for input
   ## This can be stored your the environment as well
@@ -272,6 +278,16 @@ function _discover_submodules()
   fi
 }
 
+function _create_gitignore()
+{
+
+  # Create .gitignore
+  git svn show-ignore\
+    |grep [a-zA-Z0-9]\
+    |grep -v '^#'\
+    |sed 's/^\///g' >> .gitignore
+}
+
 ## Discover what our repository looks like
 function _get_svn_layout()
 {
@@ -286,7 +302,7 @@ function _get_svn_layout()
   if [[ ! -z ${TRUNK} ]] && [[ ! -z ${ROOT_FILES} ]]
   then
     clear
-    echo "Repository Name: ${REPO_NAME}" && echo ""
+    echo "Repository: ${REPO_URL}" && echo ""
     _print_banner "You have a non-empty \"trunk\" folder, but there are also" \
     "files/folders in the root of your repository. There is"\
     "no way to intelligently know what to do with these, and"\
@@ -373,7 +389,7 @@ function _git_svn_clone()
       RESULT=$?
       while [[ ${RESULT} -ne 0 ]]
       do
-        if [[ ${RETRY_COUNT} -gt 5 ]]
+        if [[ ${RETRY_COUNT} -ge 5 ]]
         then
           echo "" && echo ""
           echo "It would appear that retrying is a pointless venture."
@@ -409,7 +425,8 @@ function _git_svn_clone()
         done
         if [[ "${RETRY,,}" == "no" ]]
         then
-          RESULT=0
+          git svn reset ${OLD_REV} &>> ${LOG_FILE} > /dev/null
+          RESULT=$?
         else
           showBar ${CURRENT_REV} ${REV_COUNT}
           echo -e "" && echo -e "     REV: ${REV}"
