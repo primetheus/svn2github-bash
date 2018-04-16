@@ -1,8 +1,12 @@
 ## Include files in the current working directory
-INC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
-source ${INC_DIR}/_functions.sh
+if [[ $(uname) != 'Linux' ]]
+then
+  source _functions.sh
+else
+  INC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
+  [[ -f ${INC_DIR}/_functions.sh ]] && source ${INC_DIR}/_functions.sh
+fi
 
-_cleanup
 _welcome
 _setup
 _svn_sizer
