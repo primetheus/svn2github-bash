@@ -48,6 +48,19 @@ docker exec -it svn2github bash
 ./svn2github.sh
 ```
 
+### Running in Windows (Git-Bash)
+1. Download the release and extract it
+2. Ensure you have a Subversion client installed _with the CLI utilities_.
+3. Open the `Git Bash` terminal
+4. Add the Subversion binaries to your path
+    - `export PATH=${PATH}:/c/Program\ Files/TortoiseSVN/bin`
+5. Edit the `settings.ini` file and add your specifics
+6. Add your `git config` properties
+    - `git config --global user.name "Kal El"`
+    - `git config --global user.email "manofsteel@krypton.org"`
+7. Execute the `svn2github.sh` script and follow the prompts
+    - `./svn2github.sh`
+
 ## Using individual functions
 ### _svn_sizer
 ```bash
