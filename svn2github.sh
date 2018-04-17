@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 ## Include files in the current working directory
 if [[ $(uname) != 'Linux' ]]
 then
