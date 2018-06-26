@@ -94,6 +94,8 @@ GITHUB_ORG=GitHub-Demo
 AUTHORS_FILE=/tmp/authors.txt
 SVN_USERNAME=anonymous
 SVN_PASSWORD=anonymous
+ENABLE_SUBMODULES=true
+MIGRATE_HISTORY=true
 ```
 
 ## Caveats
