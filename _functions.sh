@@ -457,6 +457,7 @@ function _initialize_lfs()
       EXTENSION=$(echo ${FILE}|awk -F'.' {'print " *."$3'})
       git lfs track ${EXTENSION}
       git add ${EXTENSION}
+      git lfs migrate --include="*.${EXTENSION}"
     done
     git add .gitattributes
     git commit -m "Initialized Git-LFS"
