@@ -11,6 +11,7 @@ fi
 _welcome
 _setup
 _svn_sizer
+## Process submodules
 if [[ ${ENABLE_SUBMODULES} ]]
 then
   _discover_submodules
@@ -24,7 +25,7 @@ _git_svn_clone
   git config http.sslVerify false
   _prepare_github
   _migrate_trunk
-  _add_git_submodules
+  [[ ${ENABLE_SUBMODULES} ]] && _add_git_submodules
   _migrate_tags
   _migrate_branches
 )
