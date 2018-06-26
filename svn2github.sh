@@ -11,8 +11,13 @@ fi
 _welcome
 _setup
 _svn_sizer
-_discover_submodules
-_process_submodules
+if [[ ${ENABLE_SUBMODULES} ]]
+then
+  _discover_submodules
+  _process_submodules
+else
+  _get_svn_layout
+fi
 _git_svn_clone
 (
   cd ${REPO_NAME}
