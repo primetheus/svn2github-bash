@@ -203,78 +203,81 @@ function _discover_submodules()
   unset IGNORE_DIRS SUBMODULES ACTIONS SELECTION SUBDIRS choices options MENU FLAGS
   _get_svn_layout
   clear
-  echo "Discovering potential submodule candidates..."
-  # Get the potential list of submodules, with branches, tags and trunk
-  svn -R list ${REPO_URL} ${SVN_OPTIONS}|grep -E '(/trunk/$|/branches/$|/tags/$)' > /tmp/submodules.txt
-  # it turns out, some folks have .git in their repos, and this falsely
-  # identifies those as submodules. Let's remove those entries and not
-  # present the user with the option to migrate them
-  sed -i 's/\/.git\//d' /tmp/submodules.txt
-  # Remove empty "trunk", "tags" and "branches" from the list of potentials
-  for DIR in $(cat /tmp/submodules.txt);
-  do
-    FILES=$(svn list ${REPO_URL}/${DIR} ${SVN_OPTIONS})
-    if [[ ${#FILES} -le 1 ]]
-    then
-      sed -i "s/${DIR}/d" /tmp/submodules.txt
-    fi
-  done
-  # Get the path to the submodules
-  export SUBMODULES=$(grep -E '(/trunk/$|/branches/$|/tags/$)' /tmp/submodules.txt|\
-  sed -e 's/trunk\/$//' -e 's/tags\/$//' -e 's/branches\/$//'|sort|uniq)
-
-  # Print a report of the discovered submodules
-  if [[ ${#SUBMODULES} -le 4 ]]
+  if [[ ${ENABLE_SUBMODULES} ]]
   then
-    echo "There were no nested repositories discovered"
-  else
-    options=($(echo ${SUBMODULES}))
-    #Actions to take based on selection
-    function ACTIONS {
-      for NUM in ${!options[@]}; do
-        [[ ${choices[NUM]} ]] && SUBDIRS+="${options[NUM]} "
-      done
-      if [[ ! -z ${SUBDIRS} ]]
+    echo "Discovering potential submodule candidates..."
+    # Get the potential list of submodules, with branches, tags and trunk
+    svn -R list ${REPO_URL} ${SVN_OPTIONS}|grep -E '(/trunk/$|/branches/$|/tags/$)' > /tmp/submodules.txt
+    # it turns out, some folks have .git in their repos, and this falsely
+    # identifies those as submodules. Let's remove those entries and not
+    # present the user with the option to migrate them
+    sed -i 's/\/.git\//d' /tmp/submodules.txt
+    # Remove empty "trunk", "tags" and "branches" from the list of potentials
+    for DIR in $(cat /tmp/submodules.txt);
+    do
+      FILES=$(svn list ${REPO_URL}/${DIR} ${SVN_OPTIONS})
+      if [[ ${#FILES} -le 1 ]]
       then
-        export IGNORE_DIRS=$(echo "'^("${SUBDIRS}")$'"|sed -e 's/ /|/g;s/\/|)/\/)/')
-        export FLAGS+=" --ignore-paths ${IGNORE_DIRS}"
-      fi
-    }
-    #Variables
-    ERROR=" "
-    #Clear screen for menu
-    clear
-    #Menu function
-    function MENU {
-      _print_banner "We have discovered the following folders that contain" \
-        "branches, tags, or trunk. This typically means that teams are using" \
-        "them as separate repositories, but there is no real method of" \
-        "discovering this, outside of the 'svn:externals' property, which is" \
-        "often not used. Please review the following folders and select which" \
-        "ones are to be treated as git submodules"
-        echo ""
-        echo "Discovered Folders"
-        for NUM in ${!options[@]}; do
-          echo "[""${choices[NUM]:- }""]" $(( NUM+1 ))") ${options[NUM]}"
-        done
-        echo "$ERROR"
-    }
-    #Menu loop
-    while MENU && read -e -p "Select the desired options using their number (again to uncheck, ENTER when done): " -n1 SELECTION && [[ -n "${SELECTION}" ]]; do
-      clear
-      if [[ "${SELECTION}" == *[[:digit:]]* && ${SELECTION} -ge 1 && ${SELECTION} -le ${#options[@]} ]]; then
-        (( SELECTION-- ))
-        if [[ "${choices[SELECTION]}" == "+" ]]; then
-          choices[SELECTION]=""
-        else
-          choices[SELECTION]="+"
-        fi
-        ERROR=" "
-      else
-        ERROR="Invalid option: ${SELECTION}"
+        sed -i "s/${DIR}/d" /tmp/submodules.txt
       fi
     done
-    ACTIONS
+    # Get the path to the submodules
+    export SUBMODULES=$(grep -E '(/trunk/$|/branches/$|/tags/$)' /tmp/submodules.txt|\
+    sed -e 's/trunk\/$//' -e 's/tags\/$//' -e 's/branches\/$//'|sort|uniq)
+
+    # Print a report of the discovered submodules
+    if [[ ${#SUBMODULES} -le 4 ]]
+    then
+      echo "There were no nested repositories discovered"
+    else
+      options=($(echo ${SUBMODULES}))
+      #Actions to take based on selection
+      function ACTIONS {
+        for NUM in ${!options[@]}; do
+          [[ ${choices[NUM]} ]] && SUBDIRS+="${options[NUM]} "
+        done
+        if [[ ! -z ${SUBDIRS} ]]
+        then
+          export IGNORE_DIRS=$(echo "'^("${SUBDIRS}")$'"|sed -e 's/ /|/g;s/\/|)/\/)/')
+          export FLAGS+=" --ignore-paths ${IGNORE_DIRS}"
+        fi
+      }
+      #Variables
+      ERROR=" "
+      #Clear screen for menu
+      clear
+      #Menu function
+      function MENU {
+        _print_banner "We have discovered the following folders that contain" \
+          "branches, tags, or trunk. This typically means that teams are using" \
+          "them as separate repositories, but there is no real method of" \
+          "discovering this, outside of the 'svn:externals' property, which is" \
+          "often not used. Please review the following folders and select which" \
+          "ones are to be treated as git submodules"
+          echo ""
+          echo "Discovered Folders"
+          for NUM in ${!options[@]}; do
+            echo "[""${choices[NUM]:- }""]" $(( NUM+1 ))") ${options[NUM]}"
+          done
+          echo "$ERROR"
+      }
+      #Menu loop
+      while MENU && read -e -p "Select the desired options using their number (again to uncheck, ENTER when done): " -n1 SELECTION && [[ -n "${SELECTION}" ]]; do
+        clear
+        if [[ "${SELECTION}" == *[[:digit:]]* && ${SELECTION} -ge 1 && ${SELECTION} -le ${#options[@]} ]]; then
+          (( SELECTION-- ))
+          if [[ "${choices[SELECTION]}" == "+" ]]; then
+            choices[SELECTION]=""
+          else
+            choices[SELECTION]="+"
+          fi
+          ERROR=" "
+        else
+          ERROR="Invalid option: ${SELECTION}"
+        fi
+      done
+      ACTIONS
+    fi
   fi
 }
 
