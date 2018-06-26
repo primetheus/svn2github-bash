@@ -19,7 +19,14 @@ then
 else
   _get_svn_layout
 fi
-_git_svn_clone
+## Perform a clean cutover or migrate history
+if [[ ${MIGRATE_HISTORY} ]]
+then
+  _git_svn_clone
+else
+  _clean_cutover
+fi
+## Migrate trunk, branches, tags, submodules
 (
   cd ${REPO_NAME}
   git config http.sslVerify false
