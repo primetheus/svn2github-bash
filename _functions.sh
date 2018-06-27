@@ -461,6 +461,8 @@ function _initialize_lfs()
     done
     git add .gitattributes
     git commit -m "Initialized Git-LFS"
+    git reflog expire --expire-unreachable=now --all
+    git gc --prune=now
   fi
 }
 
