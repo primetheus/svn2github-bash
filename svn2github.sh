@@ -5,7 +5,7 @@ then
   source _functions.sh
 else
   INC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
-  [[ -f ${INC_DIR}/_functions.sh ]] && source ${INC_DIR}/_functions.sh
+  [[ -f "${INC_DIR}/_functions.sh" ]] && source "${INC_DIR}/_functions.sh"
 fi
 
 _welcome
@@ -23,17 +23,18 @@ fi
 if [[ ${MIGRATE_HISTORY} ]]
 then
   _git_svn_clone
+  ## Migrate trunk, branches, tags, submodules
+  (
+    cd ${REPO_NAME}
+    git config http.sslVerify false
+    _prepare_github
+    _migrate_trunk
+    [[ ${ENABLE_SUBMODULES} ]] && _add_git_submodules
+    _migrate_tags
+    _migrate_branches
+  )
 else
   _clean_cutover
 fi
-## Migrate trunk, branches, tags, submodules
-(
-  cd ${REPO_NAME}
-  git config http.sslVerify false
-  _prepare_github
-  _migrate_trunk
-  [[ ${ENABLE_SUBMODULES} ]] && _add_git_submodules
-  _migrate_tags
-  _migrate_branches
-)
+
 _cleanup

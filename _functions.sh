@@ -1,40 +1,40 @@
 function _setup()
 {
   # This is for Windows Git-Bash, so we can include `bc.exe`
-  export PATH=${PATH}:$(pwd)
+  export PATH="${PATH}":"$(pwd)"
   ## Git-SVN has issues on Mac... don't try it. Just use Docker or a VM
   if [[ $(uname) != 'Linux' ]]
   then
     source settings.ini
   else
     INC_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
-    [[ -f ${INC_DIR}/settings.ini ]] && source ${INC_DIR}/settings.ini
+    [[ -f "${INC_DIR}/settings.ini" ]] && source "${INC_DIR}/settings.ini"
   fi
   ## If we have a settings file, use it to bypass input
   rm -f /tmp/{submodules,github_remotes}.txt
   ## If there's no settings file, ask for input
   ## This can be stored your the environment as well
-  while [ -z ${REPOSITORY} ];do
-    [[ -z ${REPOSITORY} ]] && read -p "Please specify an SVN Repository: " REPOSITORY
+  while [ -z "${REPOSITORY}" ];do
+    [[ -z "${REPOSITORY}" ]] && read -p "Please specify an SVN Repository: " REPOSITORY
     export REPOSITORY # exporting so it's callable outside of this function
   done
-  while [ -z ${GITHUB_URL} ];do
-    [[ -z ${GITHUB_URL} ]] && read -p "Please specify a URL for GitHub (i.e. https://github.mycompany.com): " GITHUB_URL
+  while [ -z "${GITHUB_URL}" ];do
+    [[ -z "${GITHUB_URL}" ]] && read -p "Please specify a URL for GitHub (i.e. https://github.mycompany.com): " GITHUB_URL
     export GITHUB_URL # exporting so it's callable outside of this function
   done
-  while [ -z ${GITHUB_ORG} ];do
-    [[ -z ${GITHUB_ORG} ]] && read -p "Please specify an Organization to place these repositories in: " GITHUB_ORG
+  while [ -z "${GITHUB_ORG}" ];do
+    [[ -z "${GITHUB_ORG}" ]] && read -p "Please specify an Organization to place these repositories in: " GITHUB_ORG
     export GITHUB_ORG # exporting so it's callable outside of this function
   done
-  while [ -z ${GITHUB_TOKEN} ];do
-    [[ -z ${GITHUB_TOKEN} ]] && echo -n "Please provide a Personal Access Token that can create repositories in ${GITHUB_ORG}: ";read -s GITHUB_TOKEN
+  while [ -z "${GITHUB_TOKEN}" ];do
+    [[ -z "${GITHUB_TOKEN}" ]] && echo -n "Please provide a Personal Access Token that can create repositories in ${GITHUB_ORG}: ";read -s GITHUB_TOKEN
     export GITHUB_TOKEN # exporting so it's callable outside of this function
     echo ""
   done
   [[ -z ${MAX_FILE_SIZE} ]] && MAX_FILE_SIZE=100
   if [[ ! -z ${AUTHORS_FILE} ]]
   then
-    if [[ ! -f ${AUTHORS_FILE} ]]
+    if [[ ! -f "${AUTHORS_FILE}" ]]
     then
       echo "${AUTHORS_FILE} does not exist, but the AUTHORS_FILE variable is set"
       echo "Please ensure this file is created and contains a complete list of"
