@@ -3,7 +3,7 @@
 This script migrates a subversion repository to GitHub, with some logic for dealing with nested repositories.
 
 ## Requirements
-This script was developed using `CentOS 7` with the following packages installed:
+This script was developed using `Ubuntu 18.04` with the following packages installed:
 - [ ] `bc`
 - [ ] `git`
 - [ ] `git-lfs`
