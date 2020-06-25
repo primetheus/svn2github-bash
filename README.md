@@ -5,14 +5,16 @@ This script migrates a subversion repository to GitHub, with some logic for deal
 ## Requirements
 This script was developed using `CentOS 7` with the following packages installed:
 - [ ] `bc`
-- [ ] `git2u`
-- [ ] `git2u-svn`
-- [ ] `Git-LFS`
+- [ ] `git`
+- [ ] `git-lfs`
+- [ ] `git-svn`
+- [ ] `subversion`
 
 To install, run the following commands:
+
 ```bash
-sudo yum -y localinstall https://centos7.iuscommunity.org/ius-release.rpm
-sudo yum -y install git2u-svn git2u bc git-lfs
+sudo apt-get update
+sudo apt-get install git git-svn git-lfs subversion bc
 ```
 ### Building the Docker container
 ```bash
@@ -43,7 +45,13 @@ docker run -dit --name svn2github github/svn2github
 docker exec -it svn2github bash
 ```
 3. Edit the `settings.ini` file
-4. Execute the script
+4. Create your authors file
+```bash
+source settings.ini
+svn log -q ${REPOSITORY} | awk -F '|' '/^r/ {sub("^ ", "", $2); sub(" $", "", $2); print $2" = "$2" <"$2">"}' | sort -u >> ${AUTHORS_FILE}
+```
+5. Edit the authors file to contain the correct user data
+6. Execute the script
 ```bash
 ./svn2github.sh
 ```
