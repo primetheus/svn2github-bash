@@ -48,12 +48,14 @@ docker exec -it svn2github bash
 4. Create your authors file
 ```bash
 source settings.ini
-svn log -q ${REPOSITORY} | awk -F '|' '/^r/ {sub("^ ", "", $2); sub(" $", "", $2); print $2" = "$2" <"$2">"}' | sort -u >> ${AUTHORS_FILE}
+svn log -q ${REPOSITORY} | awk -F '|' '/^r/ {sub("^ ", "", $2); sub(" $", "", $2); print $2" = "$2" <"$2"@example.com>"}' | sort -u >> ${AUTHORS_FILE}
+```
+       --OR--
+```bash
+source settings.ini
+svn log --q ${REPOSITORY} | awk '/^r/{print $3" = "$3" <"$3"@example.com>"}'|sort -u|tee /tmp/authors.txt
 ```
 5. Edit the authors file to contain the correct user data
-```bash
-svn log --quiet | awk '/^r/{print $3" = "$3" <"$3"@example.com>"}'|sort -u|tee /tmp/authors.txt
-```
 6. Execute the script
 ```bash
 ./svn2github.sh
