@@ -31,7 +31,8 @@ function _setup()
     export GITHUB_TOKEN # exporting so it's callable outside of this function
     echo ""
   done
-  [[ -z ${MAX_FILE_SIZE} ]] && MAX_FILE_SIZE=100
+  [[ -z "${MAX_FILE_SIZE}" ]] && MAX_FILE_SIZE=100
+  export MAX_FILE_SIZE
   if [[ ! -z ${AUTHORS_FILE} ]]
   then
     if [[ ! -f "${AUTHORS_FILE}" ]]
