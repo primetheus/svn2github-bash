@@ -12,7 +12,7 @@ _welcome
 _setup
 _svn_sizer
 ## Process submodules
-if [[ ${ENABLE_SUBMODULES} ]]
+if [[ "${ENABLE_SUBMODULES,,}" == "true" ]]
 then
   _discover_submodules
   _process_submodules
@@ -20,7 +20,7 @@ else
   _get_svn_layout
 fi
 ## Perform a clean cutover or migrate history
-if [[ ${MIGRATE_HISTORY} ]]
+if [[ "${MIGRATE_HISTORY,,}" == "true" ]]
 then
   _git_svn_clone
   ## Migrate trunk, branches, tags, submodules
@@ -29,7 +29,7 @@ then
     git config http.sslVerify false
     _prepare_github
     _migrate_trunk
-    [[ ${ENABLE_SUBMODULES} ]] && _add_git_submodules
+    [[ "${ENABLE_SUBMODULES,,}" == "true" ]] && _add_git_submodules
     _migrate_tags
     _migrate_branches
   )
