@@ -237,6 +237,7 @@ function _discover_submodules()
       done
       if [[ ! -z ${SUBDIRS} ]]
       then
+        export SUBMODULES="${SUBDIRS}"
         export IGNORE_DIRS=$(echo "'^("${SUBDIRS}")$'"|sed -e 's/ /|/g;s/\/|)/\/)/')
         export FLAGS+=" --ignore-paths ${IGNORE_DIRS}"
       fi
@@ -261,7 +262,7 @@ function _discover_submodules()
         echo "$ERROR"
     }
     #Menu loop
-    while MENU && read -e -p "Select the desired options using their number (again to uncheck, ENTER when done): " -n1 SELECTION && [[ -n "${SELECTION}" ]]; do
+    while MENU && read -e -p "Select the desired options using their number (again to uncheck, ENTER when done): " SELECTION && [[ -n "${SELECTION}" ]]; do
       clear
       if [[ "${SELECTION}" == *[[:digit:]]* && ${SELECTION} -ge 1 && ${SELECTION} -le ${#options[@]} ]]; then
         (( SELECTION-- ))
@@ -281,7 +282,6 @@ function _discover_submodules()
 
 function _create_gitignore()
 {
-
   # Create .gitignore
   git svn show-ignore\
     |grep [a-zA-Z0-9]\
@@ -394,7 +394,7 @@ function _git_svn_clone()
         then
           echo "" && echo ""
           echo "It would appear that retrying is a pointless venture."
-          echo "Please consider a clean cutover, as it is unlikely this"
+          echo "Please consider a clean cut-over, as it is unlikely this"
           echo "will resolve."
         fi
         echo "" && echo ""
@@ -434,7 +434,7 @@ function _git_svn_clone()
           git svn fetch -qr${REV} ${AUTHORS} &>> ${LOG_FILE} > /dev/null
           RESULT=$?
         fi
-        ((RETRY++))
+        ((RETRY_COUNT++))
       done
       ((CURRENT_REV++))
     done
