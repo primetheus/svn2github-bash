@@ -10,7 +10,7 @@ fi
 
 _welcome
 _setup
-_svn_sizer
+[[ "${SVN_SIZER,,}" == "true" ]] && _svn_sizer
 ## Process submodules
 if [[ "${ENABLE_SUBMODULES,,}" == "true" ]]
 then
@@ -19,7 +19,7 @@ then
 else
   _get_svn_layout
 fi
-## Perform a clean cutover or migrate history
+## Perform a clean cut-over or migrate history
 if [[ "${MIGRATE_HISTORY,,}" == "true" ]]
 then
   _git_svn_clone
