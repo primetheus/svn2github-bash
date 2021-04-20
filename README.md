@@ -75,10 +75,12 @@ svn log --q ${REPOSITORY} | awk '/^r/{print $3" = "$3" <"$3"@example.com>"}'|sor
     - `./svn2github.sh`
 
 ## Using individual functions
+You'll need to run the `_setup` function the first time in order to get all of the variables set properly. Once that is set, you can run each function individually.
 ### _svn_sizer
 ```bash
 $ source settings.ini
 $ source _functions.sh
+$ _setup
 $ _svn_sizer
 ###################################
 ##                               ##
