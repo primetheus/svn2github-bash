@@ -113,6 +113,25 @@ ENABLE_SUBMODULES=true
 MIGRATE_HISTORY=true
 ```
 
+## Revision retries
+One of the more powerful features of this utility is the ability to retry converting revisions. There may be network interruptions, or other factors that cause a revision to fail, and it will allow for up to 5 retries on a revision before marking it as unrecoverable and moving on. In some cases the revision itself is corrupt, which cannot be recovered by any migration tooling.
+
+```
+
+                      CLONING ULTRASTARDX
+    ┌───────────────────────────────────────────────────┐
+    │││││││││││││││││││││││││││││││││││                 │
+    └───────────────────────────────────────────────────┘
+     REV: 2326              72%
+
+
+Revision 2326 failed to clone, possibly due to corruption.
+
+Error: cat-file commit refs/remotes/svn/1.0.1 Challenge MOD: command returned error: 128
+
+Would you like to attempt revision 2326 again? (yes/no)
+```
+
 ## Caveats
 
 1. You may encounter issues with unsigned or self-signed certificates. In this case, disable `http.sslVerify` before running the script: `git config --global http.sslVerify false`
@@ -124,3 +143,5 @@ MIGRATE_HISTORY=true
 3. If you have a `trunk` folder _and_ files in the root of the repository, the script will treat the root as trunk. This is because `git-svn` cannot treat 2 folders like `master`. If this is not the desired behavior then it is up to the administrator to consolidate these files either in `trunk` or in the root. If no consolidation is done, you will still have all of those files, and a trunk folder in your `master` branch after the migration
 
 4. `Git-LFS` is automatically initialized if large files are discovered, but this does not get around the max filesize limit of GitHub. You will still need to either increase that filesize temporarily for the migration, or else manually clean up the files. This is not handled by the script
+
+
