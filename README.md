@@ -15,7 +15,7 @@ To install, run the following commands:
 
 ```bash
 sudo apt-get update
-sudo apt-get install git git-svn git-lfs subversion bc
+sudo apt-get install git git-svn git-lfs subversion bc curl
 ```
 ### Building the Docker container
 ```bash
