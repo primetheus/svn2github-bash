@@ -9,6 +9,7 @@ This script was developed using `Ubuntu 18.04` with the following packages insta
 - [ ] `git-lfs`
 - [ ] `git-svn`
 - [ ] `subversion`
+- [ ] `cURL`
 
 To install, run the following commands:
 
