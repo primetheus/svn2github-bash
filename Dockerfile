@@ -10,7 +10,7 @@ COPY settings.ini /root/settings.ini
 
 RUN apt-get update && \
     apt-get -y --no-install-recommends install \
-    git git-svn git-lfs subversion bc && \
+    git git-svn git-lfs subversion bc curl && \
     rm -fr /var/cache/apt && \
     chmod +x /root/svn2github.sh && \
     git config --global user.name "SVN to GitHub" && git config --global \
