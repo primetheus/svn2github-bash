@@ -221,8 +221,9 @@ function _discover_submodules()
     fi
   done
   # Get the path to the submodules
-  export SUBMODULES=$(grep -E '(/trunk/$|/branches/$|/tags/$)' /tmp/submodules.txt|\
-  sed -e 's/trunk\/$//' -e 's/tags\/$//' -e 's/branches\/$//'|sort|uniq)
+  #export SUBMODULES=$(grep -E '(/trunk/$|/branches/$|/tags/$)' /tmp/submodules.txt|\
+  #sed -e 's/trunk\/$//' -e 's/tags\/$//' -e 's/branches\/$//'|sort|uniq)
+  export SUBMODULES=$(grep ^nn submodules.txt | grep trunk | awk -F'trunk' {'print $1'})
 
   # Print a report of the discovered submodules
   if [[ ${#SUBMODULES} -le 4 ]]
@@ -331,7 +332,8 @@ function _process_submodules()
   do
     (
       REPO_URL=${REPOSITORY}/${SUBMODULE}
-      REPO_NAME=$(echo ${SUBMODULE}|awk -F'/' {'print $(NF-1)'})
+      #REPO_NAME=$(echo ${SUBMODULE}|awk -F'/' {'print $(NF-1)'})
+      REPO_NAME=$(echo ${SUBMODULE}|sed 's/\//-/g;s/.$//g')
       GITHUB_REMOTE=${GITHUB_URL}/${GITHUB_ORG}/${REPO_NAME}.git
       REV_LIST=$(svn log ${REPO_URL} ${SVN_OPTIONS}|grep ^r[0-9]|awk {'print $1'}|sed 's/r//'|sort)
       echo "${SUBMODULE},${GITHUB_REMOTE}" >> /tmp/github_remotes.txt
