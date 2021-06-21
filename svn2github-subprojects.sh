@@ -12,7 +12,8 @@ _welcome
 _setup
 [[ "${SVN_SIZER,,}" == "true" ]] && _svn_sizer
 ## Process sub-projects
-[[ ! -d /tmp/submodules.txt ]] && echo "Please add projects to /tmp/submodules.txt" && exit 0
+[[ ! -f /tmp/projects.txt ]] && echo "Please add projects to /tmp/projects.txt" && exit 0
+export SUBMODULES=$(cat /tmp/projects.txt)
 _process_submodules
 
 _cleanup
