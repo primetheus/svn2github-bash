@@ -427,7 +427,7 @@ function _git_svn_clone()
         if [[ "${RETRY,,}" == "no" ]]
         then
           git svn reset ${OLD_REV} &>> ${LOG_FILE} > /dev/null
-          RESULT=$?
+          RESULT=0
         else
           showBar ${CURRENT_REV} ${REV_COUNT}
           echo -e "" && echo -e "     REV: ${REV}"
