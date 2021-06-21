@@ -6,6 +6,7 @@ MAINTAINER Jared Murrell <primetheus@github.com>
 
 COPY _functions.sh /root/_functions.sh
 COPY svn2github.sh /root/svn2github.sh
+COPY svn2github-subprojects.sh /root/svn2github-subprojects.sh
 COPY settings.ini /root/settings.ini
 
 RUN apt-get update && \
