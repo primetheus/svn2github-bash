@@ -58,6 +58,7 @@ password ${SVN_PASSWORD}
 EOF
   ## Set our default SVN options
   SVN_OPTIONS="--trust-server-cert --non-interactive --username ${SVN_USERNAME} --password ${SVN_PASSWORD}"
+  SVN_OPTIONS+=" --trust-server-cert-failures='unknown-ca,cn-mismatch,expired,not-yet-valid,other'"
   ## Get the repo name and full URL for the remote subversion repository
   REPO_NAME=$(svn info ${REPOSITORY} ${SVN_OPTIONS}|grep '^Path'|awk {'print $2'}|sed 's/ /-/g')
   REPO_URL=$(svn info ${REPOSITORY} ${SVN_OPTIONS}|grep '^URL'|awk {'print $2'})
